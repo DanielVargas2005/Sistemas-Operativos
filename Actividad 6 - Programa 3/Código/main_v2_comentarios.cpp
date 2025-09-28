@@ -80,6 +80,7 @@ struct FinishedProcess {
     string resultString;
 };
 
+// --- PROTOTIPOS DE FUNCIONES ---
 void generateProcessData(vector<Process>& newProcesses, int numberProcesses);
 bool isIdUnique(const vector<Process>& processes, unsigned int id);
 void simulateProcessing(vector<Process>& newProcesses, int numberProcesses);
@@ -90,7 +91,7 @@ void displayStatus(const vector<Process>& readyProcesses,
                    int newProcessCount, bool isPaused);
 void pause_ms(int milliseconds);
 
-
+// --- FUNCIÓN PRINCIPAL ---
 int main() {
     srand(time(NULL));
     int numProcesses = 0;
@@ -119,6 +120,7 @@ int main() {
     return 0;
 }
 
+// --- SIMULACIÓN PRINCIPAL CON MODELO DE 5 ESTADOS ---
 void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
     vector<Process> readyProcesses;
     vector<pair<Process, int>> blockedProcesses;
@@ -129,11 +131,13 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
     bool isPaused = false;
 
     while (finishedProcesses.size() < numberProcesses) {
+        // 1. ADMISIÓN: Mover de Nuevos a Listos si hay espacio en memoria
         while ((readyProcesses.size() + blockedProcesses.size() + (executingProcess ? 1 : 0)) < MAX_PROCESSES_IN_MEMORY && !newProcesses.empty()) {
             readyProcesses.push_back(newProcesses.front());
             newProcesses.erase(newProcesses.begin());
         }
 
+        // 2. GESTIÓN DE BLOQUEADOS: Mover de Bloqueados a Listos si su tiempo ha terminado
         for (auto it = blockedProcesses.begin(); it != blockedProcesses.end();) {
             if (globalCounter - it->second >= BLOCKED_TIME) {
                 readyProcesses.push_back(it->first);
@@ -143,11 +147,13 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
             }
         }
 
+        // 3. DESPACHO: Mover de Listos a Ejecución si el procesador está libre
         if (executingProcess == nullptr && !readyProcesses.empty()) {
             executingProcess = new Process(readyProcesses.front());
             readyProcesses.erase(readyProcesses.begin());
         }
 
+        // 4. MANEJO DE TECLADO Y PAUSA
         if (_kbhit()) {
             char key = tolower(_getch());
             if (isPaused) {
@@ -155,14 +161,14 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
             } else {
                 switch (key) {
                     case 'p': isPaused = true; break;
-                    case 'e':
+                    case 'e': // Interrupción
                         if (executingProcess != nullptr) {
                             blockedProcesses.push_back({*executingProcess, globalCounter});
                             delete executingProcess;
                             executingProcess = nullptr;
                         }
                         break;
-                    case 'w':
+                    case 'w': // Error
                         if (executingProcess != nullptr) {
                             finishedProcesses.push_back({(int)executingProcess->getId(), "X", "Error"});
                             delete executingProcess;
@@ -173,16 +179,19 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
             }
         }
 
+        // --- Actualización y visualización ---
         displayStatus(readyProcesses, blockedProcesses, executingProcess, finishedProcesses, newProcesses.size(), isPaused);
 
         if (isPaused) {
             pause_ms(SIMULATION_SPEED_MS);
-            continue;
+            continue; // Saltar el resto del ciclo si está en pausa
         }
 
+        // 5. EJECUCIÓN: Si hay un proceso, avanzar su tiempo
         if (executingProcess != nullptr) {
             executingProcess->setTimeElapsed(executingProcess->getTimeElapsed() + 1);
             if (executingProcess->getTimeElapsed() >= executingProcess->getMaxTime()) {
+                // El proceso termina normalmente
                 float result = executingProcess->getCalculator().calculate();
                 stringstream ss;
                 ss << fixed << setprecision(2) << result;
@@ -200,6 +209,7 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
         pause_ms(SIMULATION_SPEED_MS);
     }
 
+    // Pantalla final
     displayStatus(readyProcesses, blockedProcesses, executingProcess, finishedProcesses, newProcesses.size(), isPaused);
     cout << "\n\n--- TODOS LOS PROCESOS HAN SIDO PROCESADOS ---\n";
     cout << "Contador Global Final: " << globalCounter << " unidades de tiempo.\n";
@@ -208,6 +218,7 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
     cin.ignore();
 }
 
+// --- FUNCIÓN DE VISUALIZACIÓN ACTUALIZADA ---
 void displayStatus(const vector<Process>& readyProcesses,
                    const vector<pair<Process, int>>& blockedProcesses,
                    const Process* executingProcess,
@@ -218,18 +229,19 @@ void displayStatus(const vector<Process>& readyProcesses,
     cout << "Procesos Nuevos: " << newProcessCount << (isPaused ? " (PAUSADO)" : "") << "\n";
     cout << string(100, '-') << "\n";
 
-    cout << left << setw(35) << "PROCESOS EN ESPERA" << "| "
+    cout << left << setw(35) << "COLA DE LISTOS (Ready)" << "| "
          << setw(30) << "PROCESO EN EJECUCION" << "| "
          << setw(30) << "PROCESOS TERMINADOS" << "\n";
     cout << left << setw(35) << "ID     TME    TT" << "| "
          << setw(30) << "" << "| "
-         << setw(30) << "ID     Operacion     Resultados" << "\n";
+         << setw(30) << "ID     Operacion      Res" << "\n";
     cout << string(100, '-') << "\n";
 
     size_t executingLines = 5;
     size_t maxRows = max({readyProcesses.size(), finishedProcesses.size(), (executingProcess ? executingLines : 0)});
 
     for (size_t i = 0; i < maxRows; ++i) {
+        // Columna 1: Cola de Listos
         if (i < readyProcesses.size()) {
             cout << left << setw(7) << readyProcesses[i].getId()
                  << setw(7) << readyProcesses[i].getMaxTime()
@@ -239,6 +251,7 @@ void displayStatus(const vector<Process>& readyProcesses,
         }
         cout << "| ";
 
+        // Columna 2: Proceso en Ejecución
         if (executingProcess != nullptr && i < executingLines) {
             string line = "";
             if (i == 0) line = "ID: " + to_string(executingProcess->getId());
@@ -252,10 +265,11 @@ void displayStatus(const vector<Process>& readyProcesses,
         }
         cout << "| ";
 
+        // Columna 3: Procesos Terminados
         if (i < finishedProcesses.size()) {
             stringstream ss;
             ss << left << setw(7) << finishedProcesses[i].id
-               << setw(17) << finishedProcesses[i].operationString << setw(3)
+               << setw(17) << finishedProcesses[i].operationString
                << finishedProcesses[i].resultString;
             cout << left << setw(30) << ss.str();
         } else {
@@ -265,6 +279,7 @@ void displayStatus(const vector<Process>& readyProcesses,
     }
     cout << string(100, '-') << "\n";
 
+    // Nueva sección para Procesos Bloqueados
     cout << "Procesos Bloqueados:" << endl;
     if (blockedProcesses.empty()) {
         cout << " " << endl;
@@ -278,6 +293,7 @@ void displayStatus(const vector<Process>& readyProcesses,
     cout << "Contador Global: " << globalCounter << "\n";
 }
 
+// --- FUNCIONES AUXILIARES (Ligeramente adaptadas) ---
 bool isIdUnique(const vector<Process>& processes, unsigned int id) {
     if(id == 0) return false;
     for (const Process& p : processes) {
@@ -294,7 +310,7 @@ void generateProcessData(vector<Process>& newProcesses, int numberProcesses) {
         unsigned int maxTime = 6 + rand() % (20 - 6 + 1);
         unsigned int id;
         do {
-            id = 1 + rand() % 500;
+            id = 1 + rand() % 500; // Rango de ID ampliado para evitar bucles infinitos
             bool isUsed = false;
             for(unsigned int usedId : usedIds) {
                 if (id == usedId) {
