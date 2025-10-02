@@ -251,6 +251,9 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
                         blockedProcesses.push_back({*executingProcess, globalCounter});
                         delete executingProcess;
                         executingProcess = nullptr;
+                        while(_kbhit()){
+                            _getch();
+                        }
                     }
                     break;
                 case 'w':
@@ -262,6 +265,9 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
                         finishedProcessesForDisplay.push_back({(int)executingProcess->getId(), "X", "Error"});
                         delete executingProcess;
                         executingProcess = nullptr;
+                        while(_kbhit()){
+                            _getch();
+                        }
                     }
                     break;
                 default:
@@ -289,6 +295,9 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
                 });
                 delete executingProcess;
                 executingProcess = nullptr;
+                while(_kbhit()){
+                    _getch();
+                }
             }
         }
         globalCounter++;
@@ -300,6 +309,7 @@ void simulateProcessing(vector<Process>& newProcesses, int numberProcesses) {
     cout << "Presione Enter para mostrar el BCP...";
     while (_kbhit()) _getch();
     cin.ignore();
+    cout << endl;
     sort(completedProcessesForBcp.begin(), completedProcessesForBcp.end(), [](const Process& a, const Process& b) {
         return a.getId() < b.getId();
     });
@@ -314,7 +324,7 @@ void simulatingBcp(vector<Process>& finishedProcesses) {
 }
 
 void displayBcp(const vector<Process>& processes) {
-    system("cls");
+    //system("cls");
     cout << "--- BLOQUE DE CONTROL DE PROCESOS (BCP) ---" << endl;
     cout << string(120, '-') << endl;
     cout << left
@@ -451,7 +461,11 @@ void generateProcessData(vector<Process>& newProcesses, int numberProcesses) {
             do {
                 operandB = rand() % 100 + 1;
             } while (operandB == 0);
-        } else {
+        }
+        if(operation == '^'){
+            operandB = rand () % 3 + 1;
+        }
+        else {
             operandB = rand() % 100 + 1;
         }
         newProcesses[i] = Process(operation, operandA, operandB, maxTime, id);
